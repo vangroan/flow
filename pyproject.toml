@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flow"
+version = "0.1.0"
+description = "An experimental node-based scripting system built on Python."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE.md"]
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "ty",
+]
+
+[tool.setuptools.packages.find]
+include = ["flow_base*", "flow_core*"]
+
+[tool.ruff]
+line-length = 80
+target-version = "py312"
+src = ["."]
+
+[tool.ruff.lint]
+# Ruff's documented default rules (E4, E7, E9, F) plus the flake8-bugbear (B)
+# rules and import sorting (I) suggested in the ruff documentation.
+select = [
+    "E4",
+    "E7",
+    "E9",
+    "F",
+    "B",
+    "I",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["flow_base", "flow_core"]
+
+[tool.ty.environment]
+python-version = "3.12"
+root = ["."]
+
+[tool.ty.src]
+include = ["flow_base", "flow_core", "tests"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=flow_base",
+    "--cov=flow_core",
+    "--cov-report=term-missing",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["flow_base", "flow_core"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "@(abc\\.)?abstractmethod",
+]
