@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import abc
 
-from flow_core.flow_graph import FlowGraph
+from flow_core.graph import FlowGraph
 
 
 class Executor(abc.ABC):

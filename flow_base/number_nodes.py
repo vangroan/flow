@@ -1,9 +1,11 @@
 """
 Nodes for processing primitive numbers.
 """
+
 from uuid import UUID
 
 from flow_core.node import Node
+from flow_core.node_port import PortDirection, PortSpec, PrimitiveType
 
 
 class FloatToInteger(Node):
@@ -16,6 +18,22 @@ class FloatToInteger(Node):
             node_id=node_id,
             title="Float → Integer",
             description="Converts a floating point number to an integer.",
+        )
+
+        self.port_specs.append(
+            PortSpec(
+                default_label="Value",
+                direction=PortDirection.INPUT,
+                port_type=PrimitiveType.FLOAT,
+            )
+        )
+
+        self.port_specs.append(
+            PortSpec(
+                default_label="Result",
+                direction=PortDirection.OUTPUT,
+                port_type=PrimitiveType.INT,
+            )
         )
 
     def execute(self):
@@ -32,6 +50,14 @@ class FloatLiteral(Node):
             node_id=node_id,
             title="Float Literal",
             description="Represents a floating point literal.",
+        )
+
+        self.port_specs.append(
+            PortSpec(
+                default_label="Value",
+                direction=PortDirection.OUTPUT,
+                port_type=PrimitiveType.FLOAT,
+            )
         )
 
     def execute(self):
