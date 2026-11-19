@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass
+from typing import Any
 from uuid import UUID
 
 
@@ -49,10 +50,12 @@ class PortSpec:
     A specification defines the type and options shared between all instances
     referencing this port.
     """
+    name: str
     default_label: str
     port_type: PortType
     direction: PortDirection
-
+    default: Any = None
+    """Default value assigned to the execution context."""
 
 
 @dataclass(frozen=True, slots=True, eq=True)
@@ -64,7 +67,6 @@ class PortRef:
     """
 
     node_id: UUID
-
 
     spec: PortSpec
     """

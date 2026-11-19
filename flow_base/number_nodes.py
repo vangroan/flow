@@ -1,9 +1,9 @@
 """
 Nodes for processing primitive numbers.
 """
-
 from uuid import UUID
 
+from flow_core.context import ExecutionContext
 from flow_core.node import Node
 from flow_core.node_port import PortDirection, PortSpec, PrimitiveType
 
@@ -22,6 +22,7 @@ class FloatToInteger(Node):
 
         self.port_specs.append(
             PortSpec(
+                name="value",
                 default_label="Value",
                 direction=PortDirection.INPUT,
                 port_type=PrimitiveType.FLOAT,
@@ -30,14 +31,16 @@ class FloatToInteger(Node):
 
         self.port_specs.append(
             PortSpec(
+                name="result",
                 default_label="Result",
                 direction=PortDirection.OUTPUT,
                 port_type=PrimitiveType.INT,
             )
         )
 
-    def execute(self):
-        raise NotImplementedError("TODO: Execution model still needs to be defined.")
+    def execute(self, ctx: ExecutionContext):
+        value = ctx.inputs["value"]
+        ctx.outputs["result"] = int(value)
 
 
 class FloatLiteral(Node):
@@ -54,11 +57,14 @@ class FloatLiteral(Node):
 
         self.port_specs.append(
             PortSpec(
+                name="value",
                 default_label="Value",
                 direction=PortDirection.OUTPUT,
                 port_type=PrimitiveType.FLOAT,
+                default=0.0,
             )
         )
 
-    def execute(self):
-        raise NotImplementedError("TODO: Execution model still needs to be defined.")
+    def execute(self, ctx: ExecutionContext):
+        # Port value set by executor.
+        pass
