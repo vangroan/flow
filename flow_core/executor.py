@@ -5,18 +5,22 @@ Flow graph execution engine.
 from __future__ import annotations
 
 import abc
+import logging
 from collections import deque
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from queue import Queue
 from types import MappingProxyType
 from typing import Any, Generator, Mapping
 from uuid import UUID
 
+from flow_core import logging_ext
 from flow_core.context import ExecutionContext
 from flow_core.errors import CycleError, InvalidNodeError, NodeExecutionError
 from flow_core.graph import FlowGraph
 from flow_core.node import Node
 from flow_core.node_port import Connection, PortDirection
+from flow_core.result import ExecutionResult
 
 type _DataKey = tuple[UUID, str]
 """Node data mapping key (node_id, port_spec.name)"""
@@ -136,7 +140,7 @@ class ForwardExecutor(Executor):
 
         return ExecutionContext(MappingProxyType(inputs), outputs)
 
-    def execute(self, graph: FlowGraph, data: NodeData | None = None):
+    def execute(self, graph: FlowGraph, data: NodeData | None = None) -> ExecutionResult:
         """
         Execute the flow graph using pull-based strategy.
 
@@ -148,6 +152,9 @@ class ForwardExecutor(Executor):
             InvalidNodeError: When a node in the graph has invalid ports configured.
             CycleError: When the graph contains a cycle.
         """
+        log_records: dict[UUID, list[logging.LogRecord]] = {}
+        log_queue: Queue[logging.LogRecord] = Queue()
+
         with _flow_mutation_guard(graph):
             self._validate_nodes(graph)
 
@@ -166,22 +173,27 @@ class ForwardExecutor(Executor):
             for node_id in execution_order:
                 node = nodes[node_id]
 
-                upstream = {
-                    conn.to_port.spec.name: results[conn.from_port.node_id][
-                        conn.from_port.spec.name
-                    ]
-                    for conn in incoming[node_id]
-                }
-                ctx = self._create_execution_context(node, node_data, upstream)
+                with logging_ext.capture_logs(log_queue):
 
-                try:
-                    node.execute(ctx)
-                except (KeyboardInterrupt, SystemExit):
-                    raise
-                except Exception as exc:
-                    raise NodeExecutionError("Error in node execution.") from exc
+                    upstream = {
+                        conn.to_port.spec.name: results[conn.from_port.node_id][
+                            conn.from_port.spec.name
+                        ]
+                        for conn in incoming[node_id]
+                    }
+                    ctx = self._create_execution_context(node, node_data, upstream)
+
+                    try:
+                        node.execute(ctx)
+                    except (KeyboardInterrupt, SystemExit):
+                        raise
+                    except Exception as exc:
+                        raise NodeExecutionError("Error in node execution.") from exc
 
                 results[node_id] = ctx.outputs
+                log_records[node_id] = _drain_queue(log_queue)
+
+        return ExecutionResult(logs=log_records)
 
 
 @contextmanager
@@ -191,3 +203,12 @@ def _flow_mutation_guard(graph: FlowGraph) -> Generator[None]:
         yield
     finally:
         graph._locked = False
+
+
+def _drain_queue[T](queue: Queue[T]) -> list[T]:
+    result: list[T] = []
+
+    while not queue.empty():
+        result.append(queue.get_nowait())
+
+    return result
