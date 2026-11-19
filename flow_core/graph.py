@@ -1,3 +1,4 @@
+import typing
 from types import MappingProxyType
 from typing import Mapping
 from uuid import UUID
@@ -29,6 +30,10 @@ class FlowGraph:
     @property
     def nodes(self) -> NodeMapping:
         return MappingProxyType(self._nodes)
+    
+    def get_node[T: Node](self, node_id) -> T | None:
+        node = self._nodes.get(node_id)
+        return typing.cast(T | None, node)
 
     @property
     def connections(self) -> frozenset[Connection]:

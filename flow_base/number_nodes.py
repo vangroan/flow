@@ -11,13 +11,14 @@ from flow_core.node_port import PortDirection, PortSpec, PrimitiveType
 class FloatToInteger(Node):
     """
     Float → Integer Converter.
+
+    Converts a floating point number to an integer.
     """
 
     def __init__(self, *, node_id: UUID):
         super().__init__(
             node_id=node_id,
             title="Float → Integer",
-            description="Converts a floating point number to an integer.",
         )
 
         self.port_specs.append(
@@ -52,7 +53,6 @@ class FloatLiteral(Node):
         super().__init__(
             node_id=node_id,
             title="Float Literal",
-            description="Represents a floating point literal.",
         )
 
         self.port_specs.append(

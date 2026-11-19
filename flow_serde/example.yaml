@@ -1,7 +1,0 @@
-
-nodes:
-- node_id: a3fa1ccd-a7a5-4ac7-9036-916790d31c9b
-  title: Foobar
-  pytype: flow_base.number_nodes:FloatLiteral
-
-connections: []

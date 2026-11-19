@@ -60,14 +60,16 @@ testpaths = ["tests"]
 addopts = [
     "--strict-markers",
     "--strict-config",
+    "--import-mode=importlib",
     "--cov=flow_base",
     "--cov=flow_core",
+    "--cov=flow_serde",
     "--cov-report=term-missing",
 ]
 
 [tool.coverage.run]
 branch = true
-source = ["flow_base", "flow_core"]
+source = ["flow_base", "flow_core", "flow_serde"]
 
 [tool.coverage.report]
 show_missing = true

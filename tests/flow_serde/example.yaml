@@ -1,0 +1,25 @@
+
+nodes:
+- node_id: a0000000-0000-4000-9000-000000000001
+  title: MyNumber
+  pytype: flow_base.number_nodes:FloatLiteral
+- node_id: a0000000-0000-4000-9000-000000000002
+  title: Convert
+  pytype: flow_base.number_nodes:FloatToInteger
+- node_id: a0000000-0000-4000-9000-000000000003
+  title: Print
+  pytype: flow_base.io_nodes:PrintNode
+
+connections:
+- from_port:
+    node_id: a0000000-0000-4000-9000-000000000001
+    port_name: value
+  to_port:
+    node_id: a0000000-0000-4000-9000-000000000002
+    port_name: value
+- from_port:
+    node_id: a0000000-0000-4000-9000-000000000002
+    port_name: result
+  to_port:
+    node_id: a0000000-0000-4000-9000-000000000003
+    port_name: message

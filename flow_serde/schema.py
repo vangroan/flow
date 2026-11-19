@@ -2,23 +2,33 @@ import jsonschema
 import yaml
 from jsonschema import Draft202012Validator
 
+
+NODE_ID_SCHEMA = {
+    "type": "string",
+    "format": "uuid",
+}
+
+PORT_REF = {
+    "type": "object",
+    "required": ["node_id", "port_name"],
+    "properties": {
+        "node_id": NODE_ID_SCHEMA,
+        "port_name": {"type": "string"},
+    },
+}
+
 TYPE_QUALIFIED_NAME_SCHEMA = {
     "type": "string",
     "description": "Fully qualified name of the Python class.",
 }
 
-
 PORT_DIRECTION_SCHEMA = {"type": "number", "enum": [0, 1, 2]}
-
 
 PORT_SPEC_SCHEMA = {
     "type": "object",
-    "rerquired": ["name", "direction"],
+    "required": ["name", "direction"],
     "properties": {
-        "name": {
-            "type": "string",
-        },
-        "direction": PORT_DIRECTION_SCHEMA,
+
     },
 }
 
@@ -26,10 +36,7 @@ NODE_SCHEMA = {
     "type": "object",
     "required": ["node_id", "pytype"],
     "properties": {
-        "node_id": {
-            "type": "string",
-            "format": "uuid",
-        },
+        "node_id": NODE_ID_SCHEMA,
         "title": {
             "type": "string",
         },
@@ -41,6 +48,15 @@ NODE_SCHEMA = {
     },
 }
 
+CONNECTION_SCHEMA = {
+    "type": "object",
+    "required": ["from_port", "to_port"],
+    "properties": {
+        "from_port": PORT_REF,
+        "to_port": PORT_REF,
+    },
+}
+
 
 FLOW_GRAPH_SCHEMA = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -49,13 +65,16 @@ FLOW_GRAPH_SCHEMA = {
     "description": "Graph of executable nodes.",
     "type": "object",
     "additionalProperties": False,
-    "required": ["nodes"],
+    "required": ["nodes", "connections"],
     "properties": {
         "nodes": {
             "type": "array",
             "items": NODE_SCHEMA,
         },
-        "connections": {},
+        "connections": {
+            "type": "array",
+            "items": CONNECTION_SCHEMA,
+        },
     },
 }
 
@@ -66,9 +85,3 @@ def validate(data: dict):
         FLOW_GRAPH_SCHEMA,
         format_checker=Draft202012Validator.FORMAT_CHECKER,
     )
-
-
-if __name__ == "__main__":
-    with open("flow_serde/example.yaml", "r") as fp:
-        data = yaml.safe_load(fp.read())
-        validate(data)

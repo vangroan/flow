@@ -32,16 +32,12 @@ class Node(abc.ABC):
     title: str
     """Human readable title of the node."""
 
-    description: str
-    """Optional description of the node."""
-
     port_specs: list[PortSpec]
     """Mapping of port names to their specifications."""
 
-    def __init__(self, *, node_id: UUID, title: str, description: str = ""):
+    def __init__(self, *, node_id: UUID, title: str = ""):
         self.node_id = node_id
-        self.title = title
-        self.description = description
+        self.title = title or type(self).__name__
         self.port_specs = []
 
     def portref(self, port: PortIdentifier) -> PortRef:
@@ -76,3 +72,16 @@ class Node(abc.ABC):
     def execute(self, ctx: ExecutionContext):
         """Execute the node's logic."""
         raise NotImplementedError("Subclasses must implement the execute method.")
+
+    @classmethod
+    def from_data(cls, data: dict) -> Node:
+        """
+        Construct a node from serialised data.
+
+        Subclasses must be constructible as ``cls(node_id=...)``. Override this
+        if the node has extra configuration to restore.
+        """
+        node = cls(node_id=UUID(data["node_id"]))
+        if "title" in data:
+            node.title = data["title"]
+        return node
