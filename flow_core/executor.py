@@ -140,7 +140,9 @@ class ForwardExecutor(Executor):
 
         return ExecutionContext(MappingProxyType(inputs), outputs)
 
-    def execute(self, graph: FlowGraph, data: NodeData | None = None) -> ExecutionResult:
+    def execute(
+        self, graph: FlowGraph, data: NodeData | None = None
+    ) -> ExecutionResult:
         """
         Execute the flow graph using pull-based strategy.
 
@@ -167,31 +169,31 @@ class ForwardExecutor(Executor):
             for conn in graph.connections:
                 incoming[conn.to_port.node_id].append(conn)
 
-            # Mapping of nodes to their execution outputs. 
+            # Mapping of nodes to their execution outputs.
             results: dict[UUID, dict[str, Any]] = {}
 
             for node_id in execution_order:
                 node = nodes[node_id]
 
-                with logging_ext.capture_logs(log_queue):
+                upstream = {
+                    conn.to_port.spec.name: results[conn.from_port.node_id][
+                        conn.from_port.spec.name
+                    ]
+                    for conn in incoming[node_id]
+                }
+                ctx = self._create_execution_context(node, node_data, upstream)
 
-                    upstream = {
-                        conn.to_port.spec.name: results[conn.from_port.node_id][
-                            conn.from_port.spec.name
-                        ]
-                        for conn in incoming[node_id]
-                    }
-                    ctx = self._create_execution_context(node, node_data, upstream)
-
-                    try:
+                try:
+                    with logging_ext.capture_logs(log_queue):
                         node.execute(ctx)
-                    except (KeyboardInterrupt, SystemExit):
-                        raise
-                    except Exception as exc:
-                        raise NodeExecutionError("Error in node execution.") from exc
+                except (KeyboardInterrupt, SystemExit):
+                    raise
+                except Exception as exc:
+                    raise NodeExecutionError("Error in node execution.") from exc
+                finally:
+                    log_records[node_id] = _drain_queue(log_queue)
 
                 results[node_id] = ctx.outputs
-                log_records[node_id] = _drain_queue(log_queue)
 
         return ExecutionResult(logs=log_records)
 
