@@ -1,7 +1,5 @@
 import jsonschema
-import yaml
 from jsonschema import Draft202012Validator
-
 
 NODE_ID_SCHEMA = {
     "type": "string",
