@@ -6,5 +6,14 @@ from uuid import UUID
 
 
 @dataclass(frozen=True)
+class NodeResult:
+    node_id: UUID
+    exec_order: int
+    time_ns: int
+    logs: list[logging.LogRecord] = field(default_factory=list)
+    exc: Exception | None = None
+
+
+@dataclass(frozen=True)
 class ExecutionResult:
-    logs: dict[UUID, list[logging.LogRecord]] = field(default_factory=dict)
+    nodes: list[NodeResult] = field(default_factory=list)

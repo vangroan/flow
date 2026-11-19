@@ -10,6 +10,7 @@ from collections import deque
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from queue import Queue
+from time import perf_counter_ns
 from types import MappingProxyType
 from typing import Any, Generator, Mapping
 from uuid import UUID
@@ -20,7 +21,7 @@ from flow_core.errors import CycleError, InvalidNodeError, NodeExecutionError
 from flow_core.graph import FlowGraph
 from flow_core.node import Node
 from flow_core.node_port import Connection, PortDirection
-from flow_core.result import ExecutionResult
+from flow_core.result import ExecutionResult, NodeResult
 
 type _DataKey = tuple[UUID, str]
 """Node data mapping key (node_id, port_spec.name)"""
@@ -154,7 +155,8 @@ class ForwardExecutor(Executor):
             InvalidNodeError: When a node in the graph has invalid ports configured.
             CycleError: When the graph contains a cycle.
         """
-        log_records: dict[UUID, list[logging.LogRecord]] = {}
+        node_results: list[NodeResult] = []
+        counter = 0  # Execution order is useful for debug analysis
         log_queue: Queue[logging.LogRecord] = Queue()
 
         with _flow_mutation_guard(graph):
@@ -182,20 +184,33 @@ class ForwardExecutor(Executor):
                     for conn in incoming[node_id]
                 }
                 ctx = self._create_execution_context(node, node_data, upstream)
+                node_exc: Exception | None = None
 
                 try:
+                    start_time = perf_counter_ns()
                     with logging_ext.capture_logs(log_queue):
                         node.execute(ctx)
                 except (KeyboardInterrupt, SystemExit):
                     raise
                 except Exception as exc:
-                    raise NodeExecutionError("Error in node execution.") from exc
+                    node_exc = NodeExecutionError("Error in node execution.")
+                    node_exc.__cause__ = exc
                 finally:
-                    log_records[node_id] = _drain_queue(log_queue)
+                    counter += 1
+                    end_time = perf_counter_ns()
+                    node_results.append(
+                        NodeResult(
+                            node_id,
+                            exec_order=counter,
+                            time_ns=end_time - start_time,
+                            logs=list(_drain_queue(log_queue)),
+                            exc=node_exc,
+                        )
+                    )
 
                 results[node_id] = ctx.outputs
 
-        return ExecutionResult(logs=log_records)
+        return ExecutionResult(node_results)
 
 
 @contextmanager
@@ -207,10 +222,6 @@ def _flow_mutation_guard(graph: FlowGraph) -> Generator[None]:
         graph._locked = False
 
 
-def _drain_queue[T](queue: Queue[T]) -> list[T]:
-    result: list[T] = []
-
+def _drain_queue[T](queue: Queue[T]) -> Generator[T]:
     while not queue.empty():
-        result.append(queue.get_nowait())
-
-    return result
+        yield queue.get_nowait()
