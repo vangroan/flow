@@ -4,11 +4,14 @@ from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QBrush, QColor, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (
     QApplication,
+    QComboBox,
     QGraphicsEllipseItem,
     QGraphicsItem,
     QGraphicsPathItem,
+    QGraphicsProxyWidget,
     QGraphicsScene,
     QGraphicsView,
+    QLineEdit,
 )
 
 
@@ -67,10 +70,19 @@ class ResizeGrip(QGraphicsItem):
 
 
 class Node(QGraphicsItem):
-    def __init__(self, title, x, y):
+    TITLE_HEIGHT = 28
+    BODY_MARGIN = 8
+
+    def __init__(self, title, x, y, widget=None):
         super().__init__()
         self.title = title
         self.rect_ = QRectF(0, 0, 160, 90)
+        # Optional embedded Qt widget, hosted via a proxy that is a child of the node
+        # so it moves/zooms with it.
+        self.proxy = None
+        if widget is not None:
+            self.proxy = QGraphicsProxyWidget(self)
+            self.proxy.setWidget(widget)
         self.setPos(x, y)
         self.setFlags(
             QGraphicsItem.ItemIsMovable
@@ -96,6 +108,13 @@ class Node(QGraphicsItem):
         self.in_port.setPos(0, self.rect_.height() / 2)
         self.out_port.setPos(self.rect_.width(), self.rect_.height() / 2)
         self.grip.reposition()
+        if self.proxy is not None:
+            m = self.BODY_MARGIN
+            self.proxy.setPos(m, self.TITLE_HEIGHT)
+            self.proxy.resize(
+                max(0, self.rect_.width() - 2 * m),
+                self.proxy.size().height(),  # keep the widget's own height
+            )
         self._update_edges()
 
     def _update_edges(self):
@@ -144,7 +163,16 @@ class GraphView(QGraphicsView):
 
 app = QApplication(sys.argv)
 scene = QGraphicsScene(-2000, -2000, 4000, 4000)
-a, b = Node("Source", 0, 0), Node("Sink", 300, 80)
+name_edit = QLineEdit()
+name_edit.setPlaceholderText("name")
+name_edit.textChanged.connect(lambda text: print("name:", text))
+
+mode_box = QComboBox()
+mode_box.addItems(["Add", "Multiply", "Divide"])
+mode_box.currentTextChanged.connect(lambda text: print("mode:", text))
+
+a = Node("Source", 0, 0, widget=name_edit)
+b = Node("Sink", 300, 80, widget=mode_box)
 scene.addItem(a)
 scene.addItem(b)
 scene.addItem(Edge(a.out_port, b.in_port))
